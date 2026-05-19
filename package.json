@@ -1,0 +1,19 @@
+{
+  "name": "nft",
+  "version": "1.0.0",
+  "description": "Hệ thống mint NFT ERC-721 hoàn chỉnh: Upload ảnh → Hash SHA-256 → Pin IPFS → Mint lên Sepolia.",
+  "main": "deploy.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^7.0.0",
+    "@openzeppelin/contracts": "^5.6.1",
+    "dotenv": "^17.4.2",
+    "hardhat": "^3.4.5"
+  }
+}

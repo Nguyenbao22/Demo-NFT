@@ -1,0 +1,96 @@
+version: "3.8"
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  Shared volume: hardhat-node ghi contract address ra đây,
+#  backend đọc vào sau khi deploy xong.
+# ──────────────────────────────────────────────────────────────────────────────
+volumes:
+  shared_data:
+  ipfs_data:
+
+services:
+
+  # ── 1. Private blockchain (Hardhat) ────────────────────────────────────────
+  hardhat:
+    build:
+      context: ./hardhat-node
+    container_name: nft_hardhat
+    restart: unless-stopped
+    ports:
+      - "8545:8545"           # Expose RPC ra host (tiện dùng Remix IDE / MetaMask)
+    volumes:
+      - shared_data:/shared   # Ghi contract_address.txt vào đây sau khi deploy
+    networks:
+      - nft_net
+    healthcheck:
+      # Kiểm tra node đã sẵn sàng chưa bằng cách gọi eth_blockNumber
+      test: >
+        wget -qO- --post-data
+        '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+        --header 'Content-Type: application/json'
+        http://127.0.0.1:8545 || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+
+  # ── 2. Python / Flask backend ───────────────────────────────────────────────
+  ipfs:
+    image: ipfs/kubo:latest
+    container_name: nft_ipfs
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+      - "8080:8080"
+    volumes:
+      - ipfs_data:/data/ipfs
+    networks:
+      - nft_net
+    healthcheck:
+      test: ["CMD", "ipfs", "id"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    build: .
+    container_name: nft_backend
+    restart: unless-stopped
+    # Dùng start-backend.sh thay vì CMD mặc định trong Dockerfile.
+    # Script này chờ hardhat sẵn sàng rồi mới start gunicorn.
+    command: ["sh", "/app/start-backend.sh"]
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./.env:/app/.env:ro   # Biến môi trường (PINATA_JWT, PRIVATE_KEY, …)
+      - shared_data:/shared   # Đọc CONTRACT_ADDRESS từ file hardhat ghi
+    environment:
+      - LOCAL_CHAIN=true
+      - CHAIN_ID=31337
+      - SEPOLIA_RPC_URL=http://hardhat:8545
+      - IPFS_API_URL=http://ipfs:5001
+      - ALLOWED_ORIGIN=http://localhost:5500
+    depends_on:
+      hardhat:
+        condition: service_healthy
+      ipfs:
+        condition: service_healthy
+    networks:
+      - nft_net
+
+  # ── 3. Nginx frontend ───────────────────────────────────────────────────────
+  frontend:
+    image: nginx:alpine
+    container_name: nft_frontend
+    restart: unless-stopped
+    ports:
+      - "5500:80"
+    volumes:
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+    networks:
+      - nft_net
+
+networks:
+  nft_net:
+    driver: bridge

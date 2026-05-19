@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NFT Mint Studio · Private Node</title>
+
+  <!-- Google Fonts: Outfit (display) + Fira Code (monospace) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Premium Design Tokens ───────────────────────────────────── */
+    :root {
+      --bg-dark: #05050A;
+      --glass-surface: rgba(20, 20, 30, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --accent-1: #00F0FF;
+      --accent-2: #7000FF;
+      --accent-3: #FF0055;
+      --text: #F8F8FF;
+      --text-dim: #9494B8;
+      --success: #00E676;
+      --error: #FF1744;
+      --radius: 20px;
+      --font-display: 'Outfit', sans-serif;
+      --font-mono: 'Fira Code', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text);
+      font-family: var(--font-display);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 50px 20px 80px;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* ── Dynamic Ambient Background ────────────────────────── */
+    .bg-blobs {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      overflow: hidden;
+      z-index: -1;
+      background: radial-gradient(circle at center, #0F0F1B 0%, var(--bg-dark) 100%);
+    }
+
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      animation: float 20s infinite ease-in-out alternate;
+    }
+    .blob.b1 {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(112,0,255,0.2) 0%, transparent 60%);
+      top: -20%; left: -10%;
+    }
+    .blob.b2 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(0,240,255,0.2) 0%, transparent 60%);
+      bottom: -10%; right: -5%;
+      animation-delay: -5s;
+      animation-duration: 25s;
+    }
+    .blob.b3 {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(255,0,85,0.15) 0%, transparent 60%);
+      top: 40%; left: 40%;
+      animation-delay: -10s;
+      animation-duration: 30s;
+    }
+
+    @keyframes float {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(50px, -50px) scale(1.1); }
+      100% { transform: translate(-30px, 30px) scale(0.9); }
+    }
+
+    /* ── Layout ──────────────────────────────────────────── */
+    .container {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 640px;
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+    }
+
+    /* ── Header ──────────────────────────────────────────── */
+    .header { text-align: center; padding-top: 10px; animation: slideDown 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--glass-surface);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(12px);
+      border-radius: 999px;
+      padding: 8px 20px;
+      font-size: 13px;
+      color: var(--accent-1);
+      font-family: var(--font-mono);
+      letter-spacing: 0.05em;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+    .logo-badge .dot {
+      width: 8px; height: 8px;
+      background: var(--accent-1);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--accent-1);
+      animation: pulse 1.5s infinite;
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 7vw, 3.8rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 15px;
+    }
+    h1 span {
+      background: linear-gradient(135deg, var(--accent-1) 0%, var(--accent-2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 16px;
+      font-weight: 300;
+      line-height: 1.6;
+      max-width: 80%;
+      margin: 0 auto;
+    }
+
+    /* ── Glassmorphism Card ──────────────────────────────── */
+    .card {
+      background: var(--glass-surface);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      padding: 35px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
+      pointer-events: none;
+    }
+    .card:hover { border-color: rgba(255,255,255,0.15); transform: translateY(-3px); }
+
+    /* ── Tabs ────────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+    .tab {
+      padding: 12px 28px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(10px);
+      color: var(--text-dim);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 15px;
+      border: 1px solid transparent;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .tab:hover {
+      background: rgba(255,255,255,0.1);
+      color: var(--text);
+    }
+    .tab.active {
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.15) 0%, rgba(112, 0, 255, 0.15) 100%);
+      color: var(--text);
+      border-color: rgba(255,255,255,0.2);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    .panel { display: none; animation: scaleUp 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+    .panel.active { display: block; }
+
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes scaleUp { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+
+    /* ── Drop Zone ───────────────────────────────────────── */
+    .drop-zone {
+      border: 2px dashed rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 50px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      background: rgba(0,0,0,0.2);
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--accent-1);
+      background: rgba(0, 240, 255, 0.05);
+      transform: scale(1.02);
+    }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer;
+    }
+
+    .drop-icon {
+      font-size: 48px;
+      display: block;
+      margin-bottom: 20px;
+      filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
+      transition: transform 0.3s;
+    }
+    .drop-zone:hover .drop-icon { transform: translateY(-5px); }
+
+    .drop-label { font-size: 16px; color: var(--text-dim); line-height: 1.5; }
+    .drop-label strong { color: var(--text); font-weight: 600; font-size: 18px; display: block; margin-bottom: 5px; }
+
+    /* Image Preview */
+    #preview-wrap, #verify-preview-wrap {
+      display: none; margin-top: 25px; border-radius: 12px;
+      overflow: hidden; position: relative;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    #preview-img, #verify-preview-img {
+      width: 100%; max-height: 320px; object-fit: cover; display: block;
+    }
+    .preview-info {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+      padding: 25px 15px 10px; text-align: center;
+      font-family: var(--font-mono); font-size: 13px; color: var(--text);
+    }
+
+    /* ── Form Fields ─────────────────────────────────────── */
+    .field { margin-top: 25px; }
+    label {
+      display: block; font-size: 12px; font-weight: 600;
+      letter-spacing: 0.1em; color: var(--text-dim); text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    input[type="text"] {
+      width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px; padding: 16px; color: var(--text);
+      font-family: var(--font-mono); font-size: 15px; outline: none;
+      transition: all 0.3s ease;
+    }
+    input[type="text"]::placeholder { color: rgba(255,255,255,0.2); }
+    input[type="text"]:focus { border-color: var(--accent-1); box-shadow: 0 0 15px rgba(0,240,255,0.2); background: rgba(0,0,0,0.5); }
+
+    /* ── Buttons ─────────────────────────────────────────── */
+    .btn-mint {
+      margin-top: 30px; width: 100%; padding: 18px; border: none; border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent-2) 0%, var(--accent-1) 100%);
+      color: #fff; font-family: var(--font-display); font-size: 18px; font-weight: 800;
+      letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer;
+      position: relative; overflow: hidden; transition: all 0.3s ease;
+      box-shadow: 0 10px 20px rgba(0, 240, 255, 0.2);
+    }
+    .btn-mint:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 15px 25px rgba(0, 240, 255, 0.3); filter: brightness(1.1); }
+    .btn-mint:active:not(:disabled) { transform: translateY(1px); }
+    .btn-mint:disabled {
+      background: rgba(255,255,255,0.1); color: var(--text-dim);
+      box-shadow: none; cursor: not-allowed; border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    /* ── Progress Section ────────────────────────────────── */
+    #progress-section { display: none; }
+    .steps-list { display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; }
+    .step { display: flex; align-items: center; gap: 15px; font-size: 15px; color: var(--text-dim); transition: all 0.3s; }
+    
+    .step.active { color: var(--accent-1); font-weight: 600; }
+    .step.done { color: var(--success); }
+    .step.error { color: var(--error); }
+
+    .step-icon {
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 2px solid currentColor; display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0; font-family: var(--font-mono); font-weight: 500;
+      transition: all 0.3s;
+    }
+    .step.active .step-icon { background: rgba(0, 240, 255, 0.1); animation: glowPulse 1.5s infinite; }
+    .step.done .step-icon { background: rgba(0, 230, 118, 0.1); }
+    .step.error .step-icon { background: rgba(255, 23, 68, 0.1); }
+
+    .progress-bar-track { background: rgba(255,255,255,0.05); border-radius: 999px; height: 8px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent-2), var(--accent-1)); width: 0%; transition: width 0.8s cubic-bezier(0.2,0.8,0.2,1); }
+
+    /* ── Result display ──────────────────────────────────── */
+    .result-section { display: none; animation: scaleUp 0.5s ease; margin-top: 25px; }
+    .result-status {
+      display: flex; align-items: center; gap: 15px; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid var(--glass-border);
+    }
+    .result-icon { font-size: 32px; }
+    .result-heading { font-size: 22px; font-weight: 800; }
+    .result-heading.success { color: var(--success); }
+    .result-heading.failure { color: var(--error); }
+
+    .meta-grid { display: flex; flex-direction: column; gap: 15px; }
+    .meta-row { display: flex; flex-direction: column; gap: 6px; }
+    .meta-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); }
+    .meta-value { font-family: var(--font-mono); font-size: 14px; word-break: break-all; color: var(--text); background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); position: relative; }
+    
+    .meta-value::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent-1); border-radius: 3px 0 0 3px; opacity: 0; transition: opacity 0.3s; }
+    .meta-value:hover::before { opacity: 1; }
+
+    /* ── Upload Methods Switcher ───────────────────────────── */
+    .upload-methods {
+      display: flex; gap: 0; margin-bottom: 18px;
+      border-radius: 10px; overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .upload-method-btn {
+      flex: 1; padding: 10px 0; border: none; background: rgba(0,0,0,0.3);
+      color: var(--text-dim); font-family: var(--font-display); font-size: 13px;
+      font-weight: 600; cursor: pointer; transition: all 0.3s;
+      letter-spacing: 0.03em;
+    }
+    .upload-method-btn:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+    .upload-method-btn.active { background: rgba(0,240,255,0.1); color: var(--accent-1); }
+    .upload-panel { display: none; }
+    .upload-panel.active { display: block; }
+
+    /* URL input row */
+    .url-input-row { display: flex; gap: 10px; }
+    .url-input-row input {
+      flex: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px; padding: 14px 16px; color: var(--text);
+      font-family: var(--font-mono); font-size: 14px; outline: none;
+      transition: all 0.3s;
+    }
+    .url-input-row input::placeholder { color: rgba(255,255,255,0.2); }
+    .url-input-row input:focus { border-color: var(--accent-1); box-shadow: 0 0 12px rgba(0,240,255,0.15); }
+    .url-fetch-btn {
+      padding: 14px 22px; border: none; border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent-2), var(--accent-1));
+      color: #fff; font-weight: 700; cursor: pointer; font-size: 14px;
+      transition: all 0.2s; white-space: nowrap;
+    }
+    .url-fetch-btn:hover { filter: brightness(1.15); }
+    .url-fetch-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Paste hint */
+    .paste-zone {
+      border: 2px dashed rgba(255,255,255,0.1); border-radius: 16px;
+      padding: 50px 20px; text-align: center; cursor: pointer;
+      background: rgba(0,0,0,0.2); transition: all 0.3s;
+    }
+    .paste-zone:hover, .paste-zone.pasted {
+      border-color: var(--accent-1); background: rgba(0,240,255,0.05);
+    }
+
+    /* ── Gallery Grid ────────────────────────────────────── */
+    .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 25px; margin-top: 30px; }
+    .gallery-item {
+      background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 16px; padding: 15px; text-align: center;
+      transition: all 0.3s ease; cursor: pointer;
+    }
+    .gallery-item:hover { transform: translateY(-5px); border-color: rgba(255,255,255,0.15); box-shadow: 0 10px 20px rgba(0,0,0,0.3); background: rgba(255,255,255,0.03); }
+    .gallery-item img { width: 100%; height: 220px; object-fit: cover; border-radius: 10px; margin-bottom: 15px; transition: transform 0.3s; }
+    .gallery-item:hover img { transform: scale(1.02); }
+    .gallery-info { font-family: var(--font-mono); font-size: 13px; color: var(--text-dim); }
+    .gallery-id { font-family: var(--font-display); font-size: 18px; font-weight: 800; color: var(--text); margin-bottom: 5px; }
+
+    /* ── Utils ───────────────────────────────────────────── */
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    @keyframes glowPulse { 0% { box-shadow: 0 0 0 0 rgba(0,240,255,0.4); } 70% { box-shadow: 0 0 0 10px rgba(0,240,255,0); } 100% { box-shadow: 0 0 0 0 rgba(0,240,255,0); } }
+
+    .footer { text-align: center; padding-top: 40px; font-size: 13px; color: var(--text-dim); font-family: var(--font-mono); }
+    
+  </style>
+</head>
+<body>
+
+<!-- Ambient background -->
+<div class="bg-blobs">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+</div>
+
+<div class="container">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="logo-badge">
+      <span class="dot"></span>
+      Local Private Node (0ms)
+    </div>
+    <h1>Mint your <span>NFT</span></h1>
+    <p class="subtitle">
+      Tải ảnh lên hệ thống → Khởi tạo mã băm an toàn → Lưu trữ phi tập trung (IPFS) → Mở khóa token ERC-721 trên Blockchain Nội bộ.
+    </p>
+  </header>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" data-target="panel-mint">Mint NFT</button>
+    <button class="tab" data-target="panel-verify">Xác Thực</button>
+    <button class="tab" data-target="panel-gallery">Bộ Sưu Tập</button>
+  </div>
+
+  <!-- ── PANEL: MINT ──────────────────────────────────────── -->
+  <div id="panel-mint" class="panel active">
+    
+    <!-- Upload Section -->
+    <div class="card" id="mint-form-card">
+      <!-- Upload Method Tabs -->
+      <div class="upload-methods">
+        <button class="upload-method-btn active" data-upload="file" onclick="switchUpload('mint','file')">📁 Tải File</button>
+        <button class="upload-method-btn" data-upload="paste" onclick="switchUpload('mint','paste')">📋 Dán Ảnh (Ctrl+V)</button>
+        <button class="upload-method-btn" data-upload="url" onclick="switchUpload('mint','url')">🔗 Nhập URL</button>
+      </div>
+
+      <!-- Panel: File upload -->
+      <div class="upload-panel active" id="mint-upload-file">
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.gif,.webp" aria-label="Chọn file ảnh" />
+          <span class="drop-icon">✨</span>
+          <p class="drop-label">
+            <strong>Kéo & thả siêu phẩm vào đây</strong>
+            hoặc click để tải lên (.jpg, .png, .webp · Tối đa 5MB)
+          </p>
+        </div>
+      </div>
+
+      <!-- Panel: Paste -->
+      <div class="upload-panel" id="mint-upload-paste">
+        <div class="paste-zone" id="mint-paste-zone" tabindex="0">
+          <span class="drop-icon">📋</span>
+          <p class="drop-label">
+            <strong>Nhấn Ctrl+V để dán ảnh</strong>
+            Copy ảnh từ bất kỳ đâu rồi dán vào đây
+          </p>
+        </div>
+      </div>
+
+      <!-- Panel: URL -->
+      <div class="upload-panel" id="mint-upload-url">
+        <div style="padding: 20px 0;">
+          <p class="drop-label" style="margin-bottom: 15px;"><strong>Nhập đường dẫn ảnh</strong></p>
+          <div class="url-input-row">
+            <input type="text" id="mint-url-input" placeholder="https://example.com/image.jpg" />
+            <button class="url-fetch-btn" id="mint-url-btn" onclick="fetchMintUrl()">Tải ảnh</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="preview-wrap">
+        <img id="preview-img" src="" alt="Preview" />
+        <div class="preview-info" id="preview-name"></div>
+      </div>
+
+      <div class="field">
+        <label for="recipient">Địa chỉ ví sở hữu (Ethereum Address)</label>
+        <input type="text" id="recipient" placeholder="0x..." autocomplete="off" spellcheck="false" />
+      </div>
+
+      <button class="btn-mint" id="mint-btn" disabled>Khởi Tạo NFT</button>
+    </div>
+
+    <!-- Progress Section -->
+    <div class="card" id="progress-section">
+      <h3 style="margin-bottom: 25px; font-size: 20px;">Quá trình đúc...</h3>
+      <div class="steps-list">
+        <div class="step" id="step-hash"><div class="step-icon">1</div><span>Mã hóa pHash (Băm thị giác) ảnh gốc</span></div>
+        <div class="step" id="step-ipfs"><div class="step-icon">2</div><span>Đẩy dữ liệu ảnh lên mạng lưới IPFS</span></div>
+        <div class="step" id="step-meta"><div class="step-icon">3</div><span>Khởi tạo Metadata chuẩn ERC-721</span></div>
+        <div class="step" id="step-mint"><div class="step-icon">4</div><span>Ký & Gửi giao dịch lên Blockchain</span></div>
+        <div class="step" id="step-confirm"><div class="step-icon">5</div><span>Chờ xác nhận block...</span></div>
+      </div>
+      <div class="progress-bar-track"><div class="progress-bar-fill" id="progress-fill"></div></div>
+    </div>
+
+    <!-- Mint Result -->
+    <div class="card result-section" id="mint-result-section">
+      <div class="result-status">
+        <div class="result-icon" id="mint-result-icon"></div>
+        <div class="result-heading" id="mint-result-title"></div>
+      </div>
+      <div class="meta-grid" id="mint-result-body"></div>
+      <button class="btn-mint" onclick="resetMintFlow()" style="margin-top: 25px; background: rgba(255,255,255,0.05); padding: 12px; font-size: 14px;">Đúc thêm NFT mới</button>
+    </div>
+
+  </div>
+
+  <!-- ── PANEL: VERIFY ────────────────────────────────────── -->
+  <div id="panel-verify" class="panel">
+    <div class="card">
+      <h3 style="margin-bottom: 20px; font-size: 20px;">Xác Thực Nguồn Gốc</h3>
+      <div class="drop-zone" id="verify-drop-zone">
+        <input type="file" id="verify-file-input" accept=".jpg,.jpeg,.png,.gif,.webp" />
+        <span class="drop-icon">🔍</span>
+        <p class="drop-label">
+          <strong>Kiểm tra ảnh</strong>
+          Tải ảnh lên để tra cứu lịch sử đúc trên mạng lưới.
+        </p>
+      </div>
+
+      <div id="verify-preview-wrap">
+        <img id="verify-preview-img" src="" alt="Preview" />
+        <div class="preview-info" id="verify-preview-name"></div>
+      </div>
+
+      <button class="btn-mint" id="verify-btn" disabled>Truy Vấn Blockchain</button>
+    </div>
+
+    <!-- Verify Result -->
+    <div class="card result-section" id="verify-result-section">
+      <div class="result-status">
+        <div class="result-icon" id="verify-result-icon"></div>
+        <div class="result-heading" id="verify-result-title"></div>
+      </div>
+      <div class="meta-grid" id="verify-result-body"></div>
+    </div>
+  </div>
+
+  <!-- ── PANEL: GALLERY ───────────────────────────────────── -->
+  <div id="panel-gallery" class="panel">
+    <div class="card" style="text-align: center;">
+      <h2 style="font-size: 28px; margin-bottom: 10px;">Private Collection</h2>
+      <p style="color: var(--text-dim); margin-bottom: 25px;">Khám phá bộ sưu tập tài sản số trên Blockchain cục bộ</p>
+      <button class="btn-mint" id="load-nfts-btn">Tải Danh Sách</button>
+    </div>
+    
+    <div id="gallery-container" class="gallery-grid"></div>
+  </div>
+
+  <footer class="footer">
+    NFT Mint Studio · Powered by Local Hardhat Blockchain & IPFS
+  </footer>
+
+</div>
+
+<!-- ── JavaScript ────────────────────────────────────────── -->
+<script>
+  const API_BASE = 'http://localhost:5000';
+  const IPFS_GATEWAY = 'http://localhost:8080';
+
+  // ── Utils ───────────────────────────────────────────────
+  const esc = str => String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+  
+  function bytesToSize(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024, sizes = ['B', 'KB', 'MB'], i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  // ── Tabs ────────────────────────────────────────────────
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab, .panel').forEach(el => el.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.target).classList.add('active');
+    });
+  });
+
+  // ── Upload Method Switcher ──────────────────────────────
+  function switchUpload(ctx, method) {
+    const card = ctx === 'mint' ? document.getElementById('mint-form-card') : null;
+    if (!card) return;
+    card.querySelectorAll('.upload-method-btn').forEach(b => b.classList.toggle('active', b.dataset.upload === method));
+    ['file','paste','url'].forEach(m => {
+      const p = document.getElementById(`${ctx}-upload-${m}`);
+      if(p) p.classList.toggle('active', m === method);
+    });
+    // Auto-focus paste zone
+    if(method === 'paste') document.getElementById(`${ctx}-paste-zone`)?.focus();
+  }
+
+  // ── File Drops ──────────────────────────────────────────
+  function setupDragDrop(zoneId, inputId, onFile) {
+    const zone = document.getElementById(zoneId), input = document.getElementById(inputId);
+    input.addEventListener('change', () => onFile(input.files[0]));
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag-over'); onFile(e.dataTransfer.files[0]); });
+  }
+
+  // ── Shared: load file into mint preview ─────────────────
+  function loadMintFile(file) {
+    if(!file) return;
+    if(file.size > 5*1024*1024) return alert('File quá lớn (Tối đa 5MB)');
+    mintFile = file;
+    const rd = new FileReader();
+    rd.onload = e => {
+      document.getElementById('preview-img').src = e.target.result;
+      document.getElementById('preview-name').textContent = `${file.name} — ${bytesToSize(file.size)}`;
+      document.getElementById('preview-wrap').style.display = 'block';
+    };
+    rd.readAsDataURL(file);
+    checkMintReady();
+  }
+
+  // ── Mint Logic ──────────────────────────────────────────
+  let mintFile = null;
+  const mintBtn = document.getElementById('mint-btn'), recipientIn = document.getElementById('recipient');
+  
+  // Method 1: File upload / drag-drop
+  setupDragDrop('drop-zone', 'file-input', loadMintFile);
+
+  // Method 2: Ctrl+V Paste (works globally + on paste zone)
+  function handlePaste(e) {
+    const items = e.clipboardData?.items;
+    if(!items) return;
+    for(const item of items) {
+      if(item.type.startsWith('image/')) {
+        e.preventDefault();
+        const blob = item.getAsFile();
+        const ext = item.type.split('/')[1] || 'png';
+        const file = new File([blob], `pasted_image.${ext}`, { type: item.type });
+        loadMintFile(file);
+        // Visual feedback
+        const pz = document.getElementById('mint-paste-zone');
+        if(pz) { pz.classList.add('pasted'); setTimeout(() => pz.classList.remove('pasted'), 1500); }
+        return;
+      }
+    }
+  }
+  document.addEventListener('paste', handlePaste);
+
+  // Method 3: URL fetch
+  async function fetchMintUrl() {
+    const urlInput = document.getElementById('mint-url-input');
+    const btn = document.getElementById('mint-url-btn');
+    const url = urlInput.value.trim();
+    if(!url) return;
+    btn.disabled = true; btn.textContent = 'Đang tải...';
+    try {
+      const res = await fetch(url);
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      const contentType = res.headers.get('content-type') || '';
+      if(!contentType.startsWith('image/')) throw new Error('URL không phải ảnh');
+      const blob = await res.blob();
+      const ext = contentType.split('/')[1]?.split(';')[0] || 'jpg';
+      const filename = url.split('/').pop()?.split('?')[0] || `url_image.${ext}`;
+      const file = new File([blob], filename, { type: contentType });
+      loadMintFile(file);
+    } catch(err) {
+      alert('Không thể tải ảnh: ' + err.message + '\n\nLưu ý: Một số website chặn tải ảnh trực tiếp (CORS).');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Tải ảnh';
+    }
+  }
+  // Enter key on URL input
+  document.getElementById('mint-url-input')?.addEventListener('keydown', e => { if(e.key === 'Enter') fetchMintUrl(); });
+
+  recipientIn.addEventListener('input', checkMintReady);
+  function checkMintReady() { mintBtn.disabled = !(mintFile && /^0x[0-9a-fA-F]{40}$/.test(recipientIn.value.trim())); }
+
+  function resetMintFlow() {
+    document.getElementById('mint-result-section').style.display = 'none';
+    document.getElementById('mint-form-card').style.display = 'block';
+    mintFile = null; recipientIn.value = ''; document.getElementById('preview-wrap').style.display = 'none';
+    mintBtn.disabled = true; mintBtn.textContent = 'Khởi Tạo NFT';
+    document.getElementById('progress-fill').style.width = '0%';
+    ['hash','ipfs','meta','mint','confirm'].forEach((k,i) => {
+      const el = document.getElementById('step-'+k);
+      el.className = 'step'; el.querySelector('.step-icon').textContent = i+1;
+    });
+  }
+
+  mintBtn.addEventListener('click', async () => {
+    document.getElementById('mint-form-card').style.display = 'none';
+    document.getElementById('progress-section').style.display = 'block';
+    
+    // Simulate progression steps for UX
+    const st = ['hash','ipfs','meta','mint','confirm'], pMap = [10, 35, 55, 80, 100];
+    let tmrs = [];
+    st.forEach((k, i) => {
+      tmrs.push(setTimeout(() => {
+        if(i>0) { const pel=document.getElementById('step-'+st[i-1]); pel.className='step done'; pel.querySelector('.step-icon').textContent='✓'; }
+        const el=document.getElementById('step-'+k); el.className='step active'; el.querySelector('.step-icon').textContent='⟳';
+        document.getElementById('progress-fill').style.width = pMap[i] + '%';
+      }, [200, 1500, 3000, 5000, 6500][i]));
+    });
+
+    const fd = new FormData(); fd.append('image', mintFile); fd.append('recipient', recipientIn.value.trim());
+
+    try {
+      const res = await fetch(`${API_BASE}/mint`, { method: 'POST', body: fd });
+      const data = await res.json();
+      tmrs.forEach(clearTimeout); 
+
+      document.getElementById('progress-section').style.display = 'none';
+      const rs = document.getElementById('mint-result-section');
+      
+      if(res.ok && data.success) {
+        document.getElementById('mint-result-icon').textContent = '🎉';
+        document.getElementById('mint-result-title').textContent = 'Đúc NFT Thành Công!';
+        document.getElementById('mint-result-title').className = 'result-heading success';
+        document.getElementById('mint-result-body').innerHTML = `
+          <div class="meta-row"><span class="meta-label">Transaction Hash</span><div class="meta-value">${esc(data.tx_hash)}</div></div>
+          <div class="meta-row"><span class="meta-label">Mã Băm Ảnh (pHash)</span><div class="meta-value">${esc(data.image_hash)}</div></div>
+          <div class="meta-row"><span class="meta-label">IPFS Image CID</span><div class="meta-value">${esc(data.ipfs_image)}</div></div>
+          <div class="meta-row"><span class="meta-label">Chủ Sở Hữu (Owner)</span><div class="meta-value">${esc(data.recipient)}</div></div>
+        `;
+      } else {
+        throw new Error(data.detail || data.error || 'Server error');
+      }
+      rs.style.display = 'block';
+    } catch(err) {
+      tmrs.forEach(clearTimeout);
+      document.getElementById('progress-section').style.display = 'none';
+      const rs = document.getElementById('mint-result-section');
+      document.getElementById('mint-result-icon').textContent = '❌';
+      document.getElementById('mint-result-title').textContent = 'Giao Dịch Thất Bại';
+      document.getElementById('mint-result-title').className = 'result-heading failure';
+      document.getElementById('mint-result-body').innerHTML = `<div class="meta-row"><span class="meta-label">Chi Tiết Lỗi</span><div class="meta-value" style="color:var(--error);">${esc(err.message)}</div></div>`;
+      rs.style.display = 'block';
+    }
+  });
+
+  // ── Verify Logic ────────────────────────────────────────
+  let verifyFile = null;
+  const verifyBtn = document.getElementById('verify-btn');
+  
+  setupDragDrop('verify-drop-zone', 'verify-file-input', file => {
+    if(!file) return;
+    verifyFile = file;
+    const rd = new FileReader();
+    rd.onload = e => {
+      document.getElementById('verify-preview-img').src = e.target.result;
+      document.getElementById('verify-preview-name').textContent = `${file.name}`;
+      document.getElementById('verify-preview-wrap').style.display = 'block';
+    };
+    rd.readAsDataURL(file);
+    verifyBtn.disabled = false;
+  });
+
+  verifyBtn.addEventListener('click', async () => {
+    verifyBtn.disabled = true; verifyBtn.textContent = 'Đang Quét...';
+    document.getElementById('verify-result-section').style.display = 'none';
+    const fd = new FormData(); fd.append('image', verifyFile);
+
+    try {
+      const res = await fetch(`${API_BASE}/verify`, { method: 'POST', body: fd });
+      const data = await res.json();
+      
+      document.getElementById('verify-result-icon').textContent = data.minted ? '✅' : '✖';
+      document.getElementById('verify-result-title').textContent = data.minted ? 'Ảnh Tồn Tại Trên Blockchain' : 'Chưa Có Bản Ghi Nào';
+      document.getElementById('verify-result-title').className = 'result-heading ' + (data.minted ? 'success' : 'failure');
+      
+      let html = `<div class="meta-row"><span class="meta-label">Mã Băm (pHash)</span><div class="meta-value">${esc(data.image_hash || 'N/A')}</div></div>`;
+      if(data.minted) {
+        html += `<div class="meta-row"><span class="meta-label">Mã Token (Token ID)</span><div class="meta-value" style="color:var(--accent-1); font-size:18px;">#${esc(data.token_id)}</div></div>
+                 <div class="meta-row"><span class="meta-label">Smart Contract</span><div class="meta-value">${esc(data.contract)}</div></div>`;
+      }
+      document.getElementById('verify-result-body').innerHTML = html;
+      document.getElementById('verify-result-section').style.display = 'block';
+    } catch(err) {
+      alert('Lỗi truy vấn: ' + err.message);
+    } finally {
+      verifyBtn.disabled = false; verifyBtn.textContent = 'Truy Vấn Blockchain';
+    }
+  });
+
+  // ── Gallery Logic ───────────────────────────────────────
+  document.getElementById('load-nfts-btn').addEventListener('click', async (e) => {
+    const btn = e.target; btn.disabled = true; btn.textContent = 'Đang Đồng Bộ...';
+    const box = document.getElementById('gallery-container');
+    box.innerHTML = '';
+
+    try {
+      const res = await fetch(`${API_BASE}/nfts?limit=50`);
+      const data = await res.json();
+
+      if(!data.nfts || data.nfts.length === 0) {
+        box.innerHTML = `<div style="grid-column:1/-1; padding:20px; text-align:center; color:var(--text-dim);">Chưa có NFT nào được tạo trên mạng lưới.</div>`;
+        return;
+      }
+
+      function ipfs2gw(uri) { return uri && uri.startsWith('ipfs://') ? `${IPFS_GATEWAY}/ipfs/${uri.slice(7)}` : uri; }
+
+      for(const nft of data.nfts) {
+        const metaUrl = ipfs2gw(nft.token_uri);
+        let imgSrc = null;
+        if(metaUrl) {
+          try { const mr = await fetch(metaUrl); if(mr.ok) { const md = await mr.json(); imgSrc = ipfs2gw(md.image); } } catch(e){}
+        }
+
+        const tag = imgSrc ? `<img src="${esc(imgSrc)}" />` : `<div style="height:220px; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; border-radius:10px; margin-bottom:15px; font-weight:800; color:var(--text-dim);">Dữ liệu mã hoá</div>`;
+        
+        box.innerHTML += `
+          <div class="gallery-item">
+            ${tag}
+            <div class="gallery-id">Token #${esc(nft.token_id)}</div>
+            <div class="gallery-info">${esc(nft.image_hash.substring(0,20))}...</div>
+          </div>
+        `;
+      }
+    } catch(err) {
+      box.innerHTML = `<div style="grid-column:1/-1; color:var(--error); text-align:center;">Lỗi mạng: ${esc(err.message)}</div>`;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Đồng Bộ Dữ Liệu';
+    }
+  });
+
+</script>
+</body>
+</html>
